@@ -1,0 +1,13 @@
+# API keys
+.env
+
+# Kuku's scripts are confidential: never commit them
+input/*
+!input/.gitkeep
+
+# Outputs quote the scripts; share them through a private Drive link, not a public repo
+outputs/
+outputs_baseline/
+
+__pycache__/
+*.pyc
