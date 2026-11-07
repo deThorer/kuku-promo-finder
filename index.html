@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Promo Finder: find social promos in microdrama scripts</title>
+<meta name="description" content="Turns episode screenplays into checked 20-45 second promos with a hook in the first 3 seconds and a cliffhanger at the end. Runs in your browser.">
+<style>
+  :root {
+    --ink: #1c2024; --muted: #5d6670; --line: #dde1e6; --bg: #f6f7f9; --card: #ffffff;
+    --accent: #2457a6; --accent-soft: #e8eff9; --good: #1f7a4d; --good-soft: #e5f4ec; --bad: #b3261e; --bad-soft: #fbe9e7;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header .wrap { padding-top: 28px; padding-bottom: 22px; }
+  h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.01em; }
+  .tagline { margin: 0; color: var(--muted); max-width: 760px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .pill { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  main .wrap { padding-top: 22px; padding-bottom: 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 17px; display: flex; align-items: baseline; gap: 10px; }
+  .step { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; align-items: center; justify-content: center; flex: none; }
+  .hint { color: var(--muted); font-size: 13.5px; margin: 2px 0 12px; }
+  .drop { border: 1.5px dashed #b7c0cb; border-radius: 10px; padding: 22px; text-align: center; color: var(--muted); transition: background .15s, border-color .15s; }
+  .drop.over { background: var(--accent-soft); border-color: var(--accent); }
+  .drop strong { color: var(--ink); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=password], input[type=number] { font: inherit; padding: 8px 10px; border: 1px solid #c7ced6; border-radius: 7px; background: #fff; width: 100%; }
+  input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .field { flex: 1 1 200px; }
+  .field.small { flex: 0 0 120px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer; background: var(--accent); color: #fff; }
+  button.secondary { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .modes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .mode { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; flex: 1 1 260px; }
+  .mode input { margin-right: 6px; }
+  .mode.on { border-color: var(--accent); background: var(--accent-soft); }
+  .mode small { display: block; color: var(--muted); margin-left: 22px; }
+  .status { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  .status.err { color: var(--bad); }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  .eps { max-height: 280px; overflow: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; }
+  .eps td:first-child, .eps td:nth-child(2) { white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+  .chip { display: inline-block; font-family: var(--mono); font-size: 12.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; cursor: pointer; margin: 2px 4px 2px 0; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .log { font-family: var(--mono); font-size: 12.5px; background: #fafbfc; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 12px; white-space: pre-wrap; display: none; }
+  .result-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .badge { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+  .badge.ok { background: var(--good-soft); color: var(--good); }
+  .badge.fail { background: var(--bad-soft); color: var(--bad); }
+  .meta { color: var(--muted); font-size: 13.5px; }
+  .ptitle { font-size: 19px; font-weight: 700; margin: 4px 0 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .box { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .box h3 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .box .q { font-weight: 600; }
+  .box code, .mono { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .notes li { font-size: 13.5px; }
+  .notes .problem { color: var(--bad); }
+  .tx td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  .tx .CAMERA td:last-child { color: var(--muted); font-style: italic; }
+  .tx .who { white-space: nowrap; font-weight: 600; font-size: 12.5px; }
+  .tx .seg-break td { border-top: 2px solid var(--accent); }
+  footer { color: var(--muted); font-size: 13px; text-align: center; padding: 10px 20px 40px; }
+  footer a, .card a { color: var(--accent); }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Promo Finder</h1>
+    <p class="tagline">Turns microdrama episode scripts into <b>20-45 second promos</b>: a cut list with a hook in the first 3 seconds and a cliffhanger at the end, checked by code so no line is cut in half.</p>
+    <div class="pills">
+      <span class="pill">Runs in your browser: scripts are never uploaded</span>
+      <span class="pill">AI picks the moments, code enforces the rules</span>
+      <span class="pill">Works without an API key (rules-only mode)</span>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <section class="card" id="step1">
+    <h2><span class="step">1</span>Load the episode scripts</h2>
+    <p class="hint">Episode <code>.txt</code> screenplays, or a <code>.zip</code> of them. Files are read on your computer only.</p>
+    <div class="drop" id="drop">
+      <strong>Drop a .zip or .txt files here</strong><br>or
+      <input type="file" id="files" multiple accept=".txt,.zip" style="margin-left:6px">
+    </div>
+    <div class="status" id="loadStatus">No scripts loaded yet.</div>
+    <details id="epsBox" style="display:none">
+      <summary>Show episodes</summary>
+      <div class="eps"><table><thead><tr><th>Ep</th><th>Length</th><th>Logline</th></tr></thead><tbody id="epsBody"></tbody></table></div>
+    </details>
+  </section>
+
+  <section class="card" id="step2">
+    <h2><span class="step">2</span>Choose the episodes for the promo</h2>
+    <p class="hint">One episode, a run of episodes, or part of an episode: <span class="chip" data-ex="3">3</span><span class="chip" data-ex="3 4">3 4</span><span class="chip" data-ex="12-14">12-14</span><span class="chip" data-ex="12@00:40-02:10">12@00:40-02:10</span></p>
+    <div class="row">
+      <div class="field"><label for="sel">Episodes</label><input type="text" id="sel" value="3" placeholder="e.g. 3 4"></div>
+      <div class="field small"><label for="maxLen">Max seconds</label><input type="number" id="maxLen" value="45" min="20" max="60"></div>
+    </div>
+  </section>
+
+  <section class="card" id="step3">
+    <h2><span class="step">3</span>Make the promo</h2>
+    <div class="modes">
+      <label class="mode on" id="modeAiL"><input type="radio" name="mode" value="ai" checked>AI promo editor (Gemini)<small>Picks the hook, cuts and cliffhanger. Needs a free key from aistudio.google.com.</small></label>
+      <label class="mode" id="modeRuleL"><input type="radio" name="mode" value="rules">Rules only, no AI<small>Keyword and emotion scoring. A baseline to compare the AI against.</small></label>
+    </div>
+    <div class="row" id="aiFields">
+      <div class="field"><label for="key">Gemini API key</label><input type="password" id="key" placeholder="Paste your key (used only in this tab, never stored)" autocomplete="off"></div>
+      <div class="field"><label for="model">Model</label><input type="text" id="model" value="gemini-3.5-flash-lite"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="go" disabled>Make promo</button>
+      <button class="secondary" id="openSaved" title="View a promo .json saved by this page or by the Python pipeline">Open a saved promo</button>
+      <input type="file" id="savedFile" accept=".json" style="display:none">
+    </div>
+    <div class="status" id="runStatus"></div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section class="card" id="result" style="display:none"></section>
+
+  <section class="card">
+    <h2>How it works</h2>
+    <p class="hint" style="margin-bottom:6px">The same pipeline as the Python tool, ported to run here:</p>
+    <ol style="margin:0; padding-left:20px; font-size:14px">
+      <li><b>Code</b> parses every script into numbered, timed events (<span class="mono">E03.017 [01:12.40-01:14.90] ...</span>).</li>
+      <li><b>The AI</b> picks 1-4 segments, the hook and the cliffhanger by <b>event ID only</b>, so it can never invent a timestamp.</li>
+      <li><b>Code checks the hard rules:</b> 20-45 s long, hook within 3 s, ends on the cliffhanger, no line cut in half, story order. Small fixes are automatic; anything else goes back to the AI with the measurements (up to 3 tries). If the only problem left is a promo up to 15 s too long, code cuts a chunk from the middle at line boundaries.</li>
+      <li>The output is the <b>cut list</b> (episode + start + end per segment), plus a transcript of what the viewer sees and hears.</li>
+    </ol>
+    <p class="hint" style="margin-top:10px">The full pipeline (moment bank for every episode, 147 scored episode runs, theme montages, a cold-viewer test, a judge and the final ranking) runs as the Python tool / Colab notebook: <a href="https://github.com/deThorer/kuku-promo-finder" target="_blank" rel="noopener">github.com/deThorer/kuku-promo-finder</a>.</p>
+  </section>
+</div>
+</main>
+<footer>Promo Finder: Kuku AI Generalist assignment, Problem 1. No scripts or results are hosted on this site.</footer>
+
+<script src="jszip.min.js"></script>
+<script src="promo-core.js"></script>
+<script>
+(function () {
+  "use strict";
+  const C = window.PromoCore;
+  const $ = id => document.getElementById(id);
+  let show = null, lastPromo = null;
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // ---------------------------------------------------------------- loading
+  async function readFiles(fileList) {
+    const out = [];
+    let title = "";
+    for (const f of fileList) {
+      if (/\.zip$/i.test(f.name)) {
+        const zip = await JSZip.loadAsync(f);
+        const names = Object.keys(zip.files).filter(n => /\.txt$/i.test(n) && !zip.files[n].dir && !/(^|\/)__MACOSX\//.test(n));
+        for (const n of names) out.push({ name: n, text: await zip.files[n].async("string") });
+        const dirs = [...new Set(names.map(n => n.split("/").slice(0, -1).join("/")).filter(Boolean))];
+        if (dirs.length === 1) title = dirs[0].split("/").pop();
+        if (!title) title = f.name.replace(/\.zip$/i, "");
+      } else if (/\.txt$/i.test(f.name)) {
+        out.push({ name: f.webkitRelativePath || f.name, text: await f.text() });
+      }
+    }
+    return { files: out, title };
+  }
+  async function load(fileList) {
+    const st = $("loadStatus");
+    st.className = "status"; st.textContent = "Reading scripts ...";
+    try {
+      const { files, title } = await readFiles(fileList);
+      if (!files.length) throw new Error("No .txt episode scripts found.");
+      show = C.loadShow(files, title || "Show");
+      if (!show.numbers.length) throw new Error("No episodes could be parsed from these files.");
+      const nEv = show.numbers.reduce((a, n) => a + show.episodes[n].events.length, 0);
+      const mins = show.numbers.reduce((a, n) => a + show.episodes[n].duration, 0) / 60;
+      st.innerHTML = `Loaded <b>${esc(show.title)}</b>: ${show.numbers.length} episodes (${show.numbers[0]}-${show.numbers[show.numbers.length - 1]}), ${nEv.toLocaleString()} timed events, ${mins.toFixed(0)} minutes in total.`;
+      $("epsBody").innerHTML = show.numbers.map(n => `<tr><td>${n}</td><td>${C.fmtTs(show.episodes[n].duration)}</td><td>${esc(show.episodes[n].logline)}</td></tr>`).join("");
+      $("epsBox").style.display = "";
+      $("go").disabled = false;
+    } catch (e) {
+      st.className = "status err"; st.textContent = e.message; show = null; $("go").disabled = true;
+    }
+  }
+  $("files").addEventListener("change", e => load(e.target.files));
+  const drop = $("drop");
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => load(e.dataTransfer.files));
+
+  // ---------------------------------------------------------------- options
+  document.querySelectorAll(".chip[data-ex]").forEach(c => c.addEventListener("click", () => { $("sel").value = c.dataset.ex; }));
+  document.querySelectorAll("input[name=mode]").forEach(r => r.addEventListener("change", () => {
+    const ai = document.querySelector("input[name=mode]:checked").value === "ai";
+    $("aiFields").style.display = ai ? "" : "none";
+    $("modeAiL").classList.toggle("on", ai); $("modeRuleL").classList.toggle("on", !ai);
+  }));
+
+  // ---------------------------------------------------------------- run
+  function logLine(t) { const l = $("log"); l.style.display = "block"; l.textContent += t + "\n"; }
+  $("go").addEventListener("click", async () => {
+    const st = $("runStatus"); st.className = "status"; $("log").textContent = ""; $("log").style.display = "none";
+    const ai = document.querySelector("input[name=mode]:checked").value === "ai";
+    const key = $("key").value.trim(), model = $("model").value.trim() || "gemini-3.5-flash-lite";
+    const maxLen = Math.max(20, Math.min(60, parseFloat($("maxLen").value) || 45));
+    let selection;
+    try {
+      selection = C.parseSelection($("sel").value);
+      if (!selection.length) throw new Error("Enter at least one episode number.");
+      C.selectedEvents(show, selection);
+    } catch (e) { st.className = "status err"; st.textContent = e.message; return; }
+    if (ai && !key) { st.className = "status err"; st.textContent = "Paste a Gemini API key, or choose 'Rules only, no AI'."; return; }
+    $("go").disabled = true; st.textContent = ai ? "Working: the AI picks the cuts, the checker measures them ..." : "Working ...";
+    try {
+      const t0 = performance.now();
+      const p = await C.makePromo(show, selection, { apiKey: ai ? key : null, model, rules: { maxTotal: maxLen }, onLog: logLine });
+      st.textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+      render(p);
+    } catch (e) {
+      st.className = "status err"; st.textContent = "Stopped: " + e.message;
+    } finally { $("go").disabled = false; }
+  });
+
+  // ---------------------------------------------------------------- saved promos
+  $("openSaved").addEventListener("click", () => $("savedFile").click());
+  $("savedFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { render(JSON.parse(await f.text())); $("runStatus").className = "status"; $("runStatus").textContent = `Showing saved promo ${f.name}.`; }
+    catch (err) { $("runStatus").className = "status err"; $("runStatus").textContent = "Not a promo .json file."; }
+    e.target.value = "";
+  });
+
+  // ---------------------------------------------------------------- render
+  function render(p) {
+    lastPromo = p;
+    const ok = p.status === "ok";
+    const segs = (p.segments || []).map(s => `<tr><td>${s.order}</td><td>Ep ${s.episode}</td><td class="mono">${s.start}</td><td class="mono">${s.end}</td><td>${s.seconds}s</td><td>${esc(s.purpose)}</td></tr>`).join("");
+    const fixes = ((p.checker || {}).fixes || []).map(x => `<li>${esc(x)}</li>`).join("");
+    const issues = ((p.checker || {}).issues || []).map(x => `<li class="problem">${esc(x)}</li>`).join("");
+    let prevSeg = 1;
+    const tx = (p.transcript || []).map(r => {
+      const brk = r.segment !== prevSeg ? " seg-break" : ""; prevSeg = r.segment;
+      const who = r.kind === "DIALOGUE" ? esc(r.who) : r.kind === "SOUND" ? "SOUND" : r.kind === "ACTION" ? "ACTION" : "SCREEN";
+      return `<tr class="${r.kind}${brk}"><td>${r.promo_time}</td><td class="who">${who}</td><td>${esc(r.text)}</td></tr>`;
+    }).join("");
+    const h = p.hook || {}, c = p.cliffhanger || {};
+    $("result").innerHTML = `
+      <div class="result-head">
+        <span class="badge ${ok ? "ok" : "fail"}">${ok ? "PASSES ALL RULES" : "FAILED CHECKS"}</span>
+        <span class="meta"><b>${p.total_seconds}s</b> · ${(p.segments || []).length} segment(s) · ${esc(p.provider)} · ${p.attempts} attempt(s)</span>
+        <span style="flex:1"></span>
+        <button class="secondary" id="dl">Download .json</button>
+      </div>
+      <div class="ptitle">${esc(p.title || p.selection)}</div>
+      <table><thead><tr><th>#</th><th>Episode</th><th>Start</th><th>End</th><th>Length</th><th>Purpose</th></tr></thead><tbody>${segs}</tbody></table>
+      <div class="grid2">
+        <div class="box"><h3>Hook${h.starts_at_promo_second != null ? ` · at second ${h.starts_at_promo_second}` : ""}</h3><div>${esc(h.description || "")}</div><code>${esc(h.line || "")}</code></div>
+        <div class="box"><h3>Cliffhanger</h3><div class="q">${esc(c.open_question || "")}</div><code>${esc(c.line || "")}</code></div>
+      </div>
+      ${p.context_for_new_viewer ? `<p><b>For a new viewer:</b> ${esc(p.context_for_new_viewer)}</p>` : ""}
+      ${p.why_it_works ? `<p><b>Why it works:</b> ${esc(p.why_it_works)}</p>` : ""}
+      ${(fixes || issues) ? `<h3 style="font-size:14px;margin:14px 0 4px">Checker notes</h3><ul class="notes">${issues}${fixes}</ul>` : ""}
+      <details open><summary>What the viewer sees and hears (${(p.transcript || []).length} events)</summary>
+        <table class="tx" style="margin-top:8px"><thead><tr><th>Promo time</th><th>Who / what</th><th>Text</th></tr></thead><tbody>${tx}</tbody></table>
+      </details>`;
+    $("result").style.display = "";
+    $("dl").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(lastPromo, null, 2)], { type: "application/json" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = `${(lastPromo.promo_id || "promo").replace(/[^A-Za-z0-9_.+-]/g, "_")}.json`; a.click();
+    });
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+})();
+</script>
+</body>
+</html>

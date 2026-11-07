@@ -14,6 +14,13 @@ It makes two kinds:
 
 Every promo is then checked by code, tested on a "cold viewer" AI that has never seen the show, judged against the others, and ranked.
 
+**Try it in the browser:** the `web/` folder is a static web app (deployed on Vercel) that runs the promo maker entirely in your browser.
+- Load the episode scripts (a `.zip` or `.txt` files) and choose episodes.
+- Paste a free Gemini key, or use rules-only mode with no key.
+- Get a checked promo with its cut list.
+
+Scripts never leave your computer, and the key goes only to Google. The browser version gives identical results to the Python code: parser, checker, trim and rule-based promos all match on the real scripts (129 of 129 comparisons).
+
 **Run it in Colab:** open `Promo_pipeline.ipynb` →
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/deThorer/kuku-promo-finder/blob/main/Promo_pipeline.ipynb)
 Upload a zip of the scripts, add a free Gemini key, and run the cells top to bottom.
@@ -156,6 +163,7 @@ promo/montage.py       montage planner + builder
 promo/judge.py         cold-viewer test, comparative judge, final ranking
 run_pipeline.py        the full pipeline, stage by stage
 Promo_pipeline.ipynb   Google Colab notebook that runs everything in order
+web/                   static web app (Vercel): the promo maker in the browser (index.html, promo-core.js, bundled JSZip)
 tests/test_offline.py  41 checks, uses a fake model
 ```
 
